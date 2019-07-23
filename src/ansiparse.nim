@@ -1,37 +1,43 @@
 type
   AnsiDataKind* = enum
-    String, Escape
+    String, CSI
   AnsiData* = object
     case kind*: AnsiDataKind
     of String:
       str*: string
-    of Escape:
+    of CSI:
       parameters*: string
       intermediate*: string
       final*: char
 
 proc parseAnsi*(input: string): seq[AnsiData] =
+  ## This procedure will take a string and parse it into a sequence of AnsiData
+  ## elements that split the string in string parts and ANSI escape code parts.
   var
     lastpos = 0
     pos = 0
   while pos < input.len:
-    if input[pos] == 0x1b.char and pos+1 < input.len and input[pos+1] == '[':
-      result.add AnsiData(kind: String, str: input[lastpos..<pos])
-      pos += 2
-      lastpos = pos
-      result.add AnsiData(kind: Escape)
-      while input[pos] in {0x30.char..0x3F.char}:
+    if input[pos] == 0x1b.char and pos+1 < input.len:
+      if input[pos+1] == '[':
+        if lastpos != pos:
+          result.add AnsiData(kind: String, str: input[lastpos..<pos])
+        pos += 2
+        lastpos = pos
+        result.add AnsiData(kind: CSI)
+        while input[pos] in {0x30.char..0x3F.char}:
+          pos += 1
+        result[^1].parameters = input[lastpos..<pos]
+        lastpos = pos
+        while input[pos] in {0x20.char..0x2F.char}:
+          pos += 1
+        result[^1].intermediate = input[lastpos..<pos]
+        assert input[pos] in {0x40.char..0x7E.char}, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte
+        result[^1].final = input[pos]
         pos += 1
-      result[^1].parameters = input[lastpos..<pos]
-      lastpos = pos
-      while input[pos] in {0x20.char..0x2F.char}:
-        pos += 1
-      result[^1].intermediate = input[lastpos..<pos]
-      assert input[pos] in {0x40.char..0x7E.char}, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte
-      result[^1].final = input[pos]
-      pos += 1
-      lastpos = pos
+        lastpos = pos
+      else:
+        assert input[pos+1] notin {0x40.char..0x5F.char}, "Unknown escape sequence at position " & $pos & ", currently only CSI sequences are recognised"
     pos += 1
 
-  if lastpos != input.high:
+  if lastpos != input.len:
     result.add AnsiData(kind: String, str: input[lastpos..^1])
