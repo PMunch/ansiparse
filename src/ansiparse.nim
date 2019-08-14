@@ -33,8 +33,7 @@ proc parseAnsi*(input: string): seq[AnsiData] =
         result[^1].intermediate = input[lastpos..<pos]
         assert input[pos] in {0x40.char..0x7E.char}, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte
         result[^1].final = input[pos]
-        pos += 1
-        lastpos = pos
+        lastpos = pos + 1
       else:
         assert input[pos+1] notin {0x40.char..0x5F.char}, "Unknown escape sequence at position " & $pos & ", currently only CSI sequences are recognised"
     pos += 1

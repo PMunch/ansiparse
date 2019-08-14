@@ -59,3 +59,17 @@ test "String with colour":
   check res[3].final == 'm'
   check res[4].kind == String
   check res[4].str == " world"
+
+test "Start after end":
+  let res = parseAnsi("\e[m\e[100m")
+  check res.len == 2
+  check res[0].kind == CSI
+  check res[0].parameters == ""
+  check res[0].intermediate == ""
+  check res[0].final == 'm'
+  check res[1].kind == CSI
+  check res[1].parameters == "100"
+  check res[1].intermediate == ""
+  check res[1].final == 'm'
+
+
