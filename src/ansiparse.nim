@@ -40,3 +40,12 @@ proc parseAnsi*(input: string): seq[AnsiData] =
 
   if lastpos != input.len:
     result.add AnsiData(kind: String, str: input[lastpos..^1])
+
+proc toString*(input: seq[AnsiData]): string =
+  ## Converts the result of `parseAnsi` back into a string with the ANSI
+  ## escape codes.
+  for part in input:
+    case part.kind:
+    of String: result.add part.str
+    of CSI: result.add "\e[" & part.parameters & part.intermediate & $part.final
+
