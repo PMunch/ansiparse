@@ -41,11 +41,20 @@ proc parseAnsi*(input: string): seq[AnsiData] =
   if lastpos != input.len:
     result.add AnsiData(kind: String, str: input[lastpos..^1])
 
-proc toString*(input: seq[AnsiData]): string =
-  ## Converts the result of `parseAnsi` back into a string with the ANSI
-  ## escape codes.
+proc toString*(input: seq[AnsiData], stripAnsi = false): string =
+  ## Converts the result of `parseAnsi` back into a string. The `stripAnsi`
+  ## argument can be used to decide if the ANSI escapes codes are output in the
+  ## string or not.
   for part in input:
     case part.kind:
-    of String: result.add part.str
-    of CSI: result.add "\e[" & part.parameters & part.intermediate & $part.final
+    of String:
+      result.add part.str
+    of CSI:
+      if not stripAnsi:
+        result.add "\e[" & part.parameters & part.intermediate & $part.final
 
+proc textLen*(ansiSequence: seq[AnsiData]): int =
+  ## Returns the length of the string without counting the ANSI escape codes.
+  for part in ansiSequence:
+    if part.kind == String:
+      result += part.str.len

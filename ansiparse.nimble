@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "PMunch"
 description   = "A package to read data and parse it into ANSI escape characters"
 license       = "MIT"
