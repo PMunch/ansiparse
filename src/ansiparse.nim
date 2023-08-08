@@ -9,6 +9,10 @@ type
       parameters*: string
       intermediate*: string
       final*: char
+  AnsiParseError = object of CatchableError
+    position: int
+  FinalByteError = object of AnsiParseError
+  UnknownEscapeError = object of AnsiParseError
 
 proc parseAnsi*(input: string): seq[AnsiData] =
   ## This procedure will take a string and parse it into a sequence of AnsiData
@@ -31,11 +35,16 @@ proc parseAnsi*(input: string): seq[AnsiData] =
         while input[pos] in {0x20.char..0x2F.char}:
           pos += 1
         result[^1].intermediate = input[lastpos..<pos]
-        assert input[pos] in {0x40.char..0x7E.char}, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte
+        if input[pos] notin {0x40.char..0x7E.char}:
+          var err = newException(FinalByteError, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte)
+          err.position = pos
+          raise err
         result[^1].final = input[pos]
         lastpos = pos + 1
       else:
-        assert input[pos+1] notin {0x40.char..0x5F.char}, "Unknown escape sequence at position " & $pos & ", currently only CSI sequences are recognised"
+        var err = newException(UnknownEscapeError, "Unknown escape sequence at position " & $pos & ", currently only CSI sequences are recognised")
+        err.position = pos
+        raise err
     pos += 1
 
   if lastpos != input.len:
