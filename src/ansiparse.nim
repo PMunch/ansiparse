@@ -29,7 +29,7 @@ proc parseAnsi*(input: string): seq[AnsiData] =
         pos += 2
         lastpos = pos
         result.add AnsiData(kind: CSI)
-        while input.len < pos and input[pos] in {0x30.char..0x3F.char}:
+        while input.len > pos and input[pos] in {0x30.char..0x3F.char}:
           pos += 1
         if pos >= input.len:
           var err = newException(InsufficientInputError, "ANSI sequence didn't properly terminate before end of input")
@@ -37,7 +37,7 @@ proc parseAnsi*(input: string): seq[AnsiData] =
           raise err
         result[^1].parameters = input[lastpos..<pos]
         lastpos = pos
-        while input.len < pos and input[pos] in {0x20.char..0x2F.char}:
+        while input.len > pos and input[pos] in {0x20.char..0x2F.char}:
           pos += 1
         if pos >= input.len:
           var err = newException(InsufficientInputError, "ANSI sequence didn't properly terminate before end of input")
@@ -58,30 +58,6 @@ proc parseAnsi*(input: string): seq[AnsiData] =
 
   if lastpos != input.len:
     result.add AnsiData(kind: String, str: input[lastpos..^1])
-
-proc validAnsi*(input: string): bool =
-  ## This procedure will take a string and verify if all recognised ANSI tags
-  ## are properly formed.
-  var
-    lastpos = 0
-    pos = 0
-  while pos < input.len:
-    if input[pos] == 0x1b.char and pos+1 < input.len:
-      if input[pos+1] == '[':
-        pos += 2
-        lastpos = pos
-        while input[pos] in {0x30.char..0x3F.char}:
-          pos += 1
-        lastpos = pos
-        while input[pos] in {0x20.char..0x2F.char}:
-          pos += 1
-        if input[pos] notin {0x40.char..0x7E.char}:
-          return false
-        lastpos = pos + 1
-      else:
-        return false
-    pos += 1
-  return true
 
 proc toString*(input: seq[AnsiData], stripAnsi = false): string =
   ## Converts the result of `parseAnsi` back into a string. The `stripAnsi`
