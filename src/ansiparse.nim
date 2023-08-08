@@ -9,10 +9,10 @@ type
       parameters*: string
       intermediate*: string
       final*: char
-  AnsiParseError = object of CatchableError
-    position: int
-  FinalByteError = object of AnsiParseError
-  UnknownEscapeError = object of AnsiParseError
+  AnsiParseError* = object of CatchableError
+    position*: int
+  FinalByteError* = object of AnsiParseError
+  UnknownEscapeError* = object of AnsiParseError
 
 proc parseAnsi*(input: string): seq[AnsiData] =
   ## This procedure will take a string and parse it into a sequence of AnsiData
@@ -49,6 +49,30 @@ proc parseAnsi*(input: string): seq[AnsiData] =
 
   if lastpos != input.len:
     result.add AnsiData(kind: String, str: input[lastpos..^1])
+
+proc validAnsi*(input: string): bool =
+  ## This procedure will take a string and verify if all recognised ANSI tags
+  ## are properly formed.
+  var
+    lastpos = 0
+    pos = 0
+  while pos < input.len:
+    if input[pos] == 0x1b.char and pos+1 < input.len:
+      if input[pos+1] == '[':
+        pos += 2
+        lastpos = pos
+        while input[pos] in {0x30.char..0x3F.char}:
+          pos += 1
+        lastpos = pos
+        while input[pos] in {0x20.char..0x2F.char}:
+          pos += 1
+        if input[pos] notin {0x40.char..0x7E.char}:
+          return false
+        lastpos = pos + 1
+      else:
+        return false
+    pos += 1
+  return true
 
 proc toString*(input: seq[AnsiData], stripAnsi = false): string =
   ## Converts the result of `parseAnsi` back into a string. The `stripAnsi`
