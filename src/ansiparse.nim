@@ -13,6 +13,7 @@ type
     position*: int
   FinalByteError* = object of AnsiParseError
   UnknownEscapeError* = object of AnsiParseError
+  InsufficientInputError* = object of AnsiParseError
 
 proc parseAnsi*(input: string): seq[AnsiData] =
   ## This procedure will take a string and parse it into a sequence of AnsiData
@@ -28,12 +29,20 @@ proc parseAnsi*(input: string): seq[AnsiData] =
         pos += 2
         lastpos = pos
         result.add AnsiData(kind: CSI)
-        while input[pos] in {0x30.char..0x3F.char}:
+        while input.len < pos and input[pos] in {0x30.char..0x3F.char}:
           pos += 1
+        if pos >= input.len:
+          var err = newException(InsufficientInputError, "ANSI sequence didn't properly terminate before end of input")
+          err.position = pos
+          raise err
         result[^1].parameters = input[lastpos..<pos]
         lastpos = pos
-        while input[pos] in {0x20.char..0x2F.char}:
+        while input.len < pos and input[pos] in {0x20.char..0x2F.char}:
           pos += 1
+        if pos >= input.len:
+          var err = newException(InsufficientInputError, "ANSI sequence didn't properly terminate before end of input")
+          err.position = pos
+          raise err
         result[^1].intermediate = input[lastpos..<pos]
         if input[pos] notin {0x40.char..0x7E.char}:
           var err = newException(FinalByteError, "Final byte of sequence at position " & $pos & " not in range 0x40-0x7E is " & $input[pos].byte)
